@@ -1,0 +1,23 @@
+Software Engineer with 5 years of experience in full-stack development. Proficient in React, Node.js, and TypeScript. Led team of 4 developers in delivering enterprise applications. Implemented CI/CD pipelines reducing deployment time by 40%. Bachelor's in Computer Science from Tech University.
+
+Skills:
+- React, Angular, Vue.js
+- Node.js, Express
+- TypeScript, JavaScript
+- AWS, Docker, Kubernetes
+- MongoDB, PostgreSQL
+
+Experience:
+Senior Software Engineer | TechCorp | 2020-Present
+- Led development of microservices architecture
+- Mentored junior developers
+- Improved application performance by 60%
+
+Software Engineer | WebSolutions | 2018-2020
+- Developed responsive web applications
+- Implemented automated testing
+- Reduced bug reports by 45%
+
+Education:
+Bachelor of Science in Computer Science
+Tech University, 2018

@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Users, UserCheck, Award, BookOpen, DollarSign, Building2, Menu, X, Bot, FileText, CheckCircle2, XCircle, Calendar, MessageSquare, UserPlus, Target, LineChart as ChartLineUp, GraduationCap, BadgeCheck, PartyPopper, ScrollText, Scale, HeartHandshake, Gauge, Trophy, AlertCircle, Upload, Video } from 'lucide-react';
+import { Users, UserCheck, Award, BookOpen, DollarSign, Building2, Menu, X, Bot, FileText, CheckCircle2, XCircle, Calendar, MessageSquare, UserPlus, Target, LineChart as ChartLineUp, GraduationCap, BadgeCheck, PartyPopper, ScrollText, Scale, HeartHandshake, Gauge, Trophy, AlertCircle, Upload, Video, PlusCircle } from 'lucide-react';
 import { VideoInterview } from './components/VideoInterview';
 
 // Add type declaration for HTMLVideoElement.captureStream
@@ -38,6 +38,37 @@ interface Agent {
   icon: JSX.Element;
   description: string;
   workflow: RecruitmentStage[];
+}
+
+// Define KPI Types
+type KPIStatus = 'not-started' | 'in-progress' | 'at-risk' | 'completed';
+
+interface KPI {
+  id: string;
+  title: string;
+  description: string;
+  target: string;
+  progress: number; // 0-100
+  status: KPIStatus;
+  dueDate: string;
+}
+
+interface Milestone {
+  id: string;
+  title: string;
+  description: string;
+  dueDate: string;
+  completed: boolean;
+  kpiId: string;
+}
+
+interface Achievement {
+  id: string;
+  employeeId: string;
+  title: string;
+  description: string;
+  date: string;
+  impact: string;
 }
 
 const SAMPLE_RESUMES: CandidatesDict = {
@@ -126,80 +157,61 @@ const analyzeTranscript = async (transcript: string): Promise<{
 // Add Gemini API integration for dynamic question generation
 const generateQuestionsWithGemini = async (role: string): Promise<string[]> => {
   try {
-    // In a real implementation, this would be an API key stored in environment variables
-    // const API_KEY = process.env.GEMINI_API_KEY;
+    const apiKey = "AIzaSyBAJ900aAaOo_SqIuneHq79VqofYyOyfNU";
+    const apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
     
-    // Create the prompt for Gemini
-    const prompt = `You are an expert technical interviewer for a ${role} position.
-    Generate 4 insightful interview questions that will help assess the candidate's technical skills, problem-solving abilities, and cultural fit.
-    The questions should be specific to the ${role} role and help evaluate their expertise.
-    Return just the questions without any additional text, numbered 1-4.`;
+    // Create a prompt that explains the task and provides context
+    const prompt = `
+      Generate 4 detailed, technical interview questions specifically for a ${role} position.
+      These questions should assess deep knowledge in the field, problem-solving abilities, and experience.
+      Format your response as a clear list of 4 questions only with no additional text or numbering.
+      Each question should be on a new line.
+    `;
     
-    // For demo purposes, we'll simulate the API call with a delay
-    // In a real implementation, this would be an actual API call to Gemini
-    // const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent', {
-    //   method: 'POST',
-    //   headers: {
-    //     'Content-Type': 'application/json',
-    //     'Authorization': `Bearer ${API_KEY}`
-    //   },
-    //   body: JSON.stringify({
-    //     contents: [{ parts: [{ text: prompt }] }],
-    //     generationConfig: {
-    //       temperature: 0.7,
-    //       maxOutputTokens: 500,
-    //     }
-    //   })
-    // });
-    // const data = await response.json();
-    // const generatedQuestions = data.candidates[0].content.parts[0].text.split('\n').filter(q => q.trim().length > 0);
+    // Make the API call
+    const response = await fetch(`${apiUrl}?key=${apiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              {
+                text: prompt
+              }
+            ]
+          }
+        ],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 800,
+        }
+      })
+    });
     
-    // Simulate a delay for the API call
-    await new Promise(resolve => setTimeout(resolve, 500));
+    if (!response.ok) {
+      throw new Error(`API request failed with status ${response.status}`);
+    }
     
-    // Simulate response from Gemini based on role
-    const roleSpecificQuestions: Record<string, string[]> = {
-      "Software Engineer": [
-        "Describe how you would design a scalable microservice architecture for a high-traffic e-commerce platform.",
-        "How would you implement a system that requires both consistency and high availability? What trade-offs would you make?", 
-        "Explain how you approach testing in your development process, from unit tests to integration tests.",
-        "How do you ensure the security of the applications you develop?"
-      ],
-      "Data Scientist": [
-        "How would you approach building a recommendation system for a content streaming platform?",
-        "Describe a time when you had to balance model accuracy with computational efficiency.",
-        "How would you detect and handle outliers in a dataset with millions of records?",
-        "Explain how you would build and deploy a machine learning model in a production environment."
-      ],
-      "UX Designer": [
-        "How do you approach designing for accessibility while maintaining aesthetic appeal?",
-        "Describe your process for conducting user research before beginning a design project.",
-        "How do you measure the success of a user interface design after implementation?",
-        "What strategies do you use to convince stakeholders when your research contradicts their assumptions?"
-      ],
-      "Project Manager": [
-        "How do you prioritize tasks when all stakeholders believe their requirements are high priority?",
-        "Describe how you would recover a project that's significantly behind schedule.",
-        "How do you manage communication between technical and non-technical team members?",
-        "What metrics do you use to track project health and success?"
-      ],
-      "Marketing Specialist": [
-        "How would you develop a content strategy for a new product launch?",
-        "Describe how you would measure ROI across different marketing channels.",
-        "How do you stay compliant with privacy regulations while maximizing marketing effectiveness?",
-        "What approach would you take to revitalize a marketing campaign that isn't meeting its goals?"
-      ]
-    };
+    const data = await response.json();
     
-    // Default questions if role not found
-    const defaultQuestions = [
-      "What are your strategies for continuous professional development?",
-      "How do you approach learning new technologies or methodologies?",
-      "Describe your ideal team culture and working environment.",
-      "What leadership qualities do you think are most important for success in this field?"
+    // Extract the generated text from the response
+    const generatedText = data.candidates[0]?.content?.parts[0]?.text || '';
+    
+    // Split the text into separate questions
+    const questions = generatedText.split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0 && line.includes('?'));
+    
+    // Ensure we have at least some questions (use fallbacks if needed)
+    return questions.length > 0 ? questions : [
+      "What are your greatest professional strengths?",
+      "How do you handle challenges in your work?",
+      "What's your approach to learning new skills?",
+      "How do you collaborate with team members from different backgrounds?"
     ];
-    
-    return roleSpecificQuestions[role] || defaultQuestions;
   } catch (error) {
     console.error('Error generating questions with Gemini:', error);
     // Fallback questions if the API call fails
@@ -387,6 +399,214 @@ function App() {
       description: 'Develop solutions based on deep understanding of user needs and behaviors'
     }
   ]);
+
+  const [employeeKPIs, setEmployeeKPIs] = useState<Record<string, KPI[]>>({
+    'john-doe': [
+      {
+        id: 'kpi1',
+        title: 'Code Quality',
+        description: 'Maintain code quality standards across projects',
+        target: '< 3 bugs per 1000 lines of code',
+        progress: 65,
+        status: 'in-progress',
+        dueDate: '2023-12-31'
+      },
+      {
+        id: 'kpi2',
+        title: 'System Performance',
+        description: 'Improve system response time',
+        target: '< 100ms response time for 99% of API requests',
+        progress: 30,
+        status: 'in-progress',
+        dueDate: '2023-11-15'
+      }
+    ],
+    'jane-smith': [
+      {
+        id: 'kpi3',
+        title: 'Model Accuracy',
+        description: 'Improve prediction accuracy of recommendation system',
+        target: '> 92% accuracy on test set',
+        progress: 80,
+        status: 'in-progress',
+        dueDate: '2023-12-15'
+      }
+    ],
+    'alex-johnson': [
+      {
+        id: 'kpi4',
+        title: 'User Satisfaction',
+        description: 'Improve user satisfaction scores for new designs',
+        target: '> 4.5/5 average user rating',
+        progress: 50,
+        status: 'at-risk',
+        dueDate: '2023-10-30'
+      }
+    ]
+  });
+
+  const [employeeMilestones, setEmployeeMilestones] = useState<Record<string, Milestone[]>>({
+    'john-doe': [
+      {
+        id: 'milestone1',
+        title: 'Implement Automated Testing',
+        description: 'Set up CI/CD pipeline with automated testing',
+        dueDate: '2023-10-15',
+        completed: true,
+        kpiId: 'kpi1'
+      },
+      {
+        id: 'milestone2',
+        title: 'Code Review Process',
+        description: 'Establish peer code review process',
+        dueDate: '2023-11-01',
+        completed: false,
+        kpiId: 'kpi1'
+      },
+      {
+        id: 'milestone3',
+        title: 'Database Optimization',
+        description: 'Optimize database queries for improved response time',
+        dueDate: '2023-10-20',
+        completed: false,
+        kpiId: 'kpi2'
+      }
+    ],
+    'jane-smith': [
+      {
+        id: 'milestone4',
+        title: 'Data Cleaning Pipeline',
+        description: 'Develop automated data cleaning pipeline',
+        dueDate: '2023-10-25',
+        completed: true,
+        kpiId: 'kpi3'
+      },
+      {
+        id: 'milestone5',
+        title: 'Feature Engineering',
+        description: 'Identify and implement new features for the model',
+        dueDate: '2023-11-10',
+        completed: false,
+        kpiId: 'kpi3'
+      }
+    ],
+    'alex-johnson': [
+      {
+        id: 'milestone6',
+        title: 'User Research',
+        description: 'Conduct user interviews and analyze feedback',
+        dueDate: '2023-09-30',
+        completed: true,
+        kpiId: 'kpi4'
+      },
+      {
+        id: 'milestone7',
+        title: 'Prototype Testing',
+        description: 'Test new design prototypes with user group',
+        dueDate: '2023-10-15',
+        completed: false,
+        kpiId: 'kpi4'
+      }
+    ]
+  });
+
+  const [employeeAchievements, setEmployeeAchievements] = useState<Record<string, Achievement[]>>({
+    'john-doe': [
+      {
+        id: 'achievement1',
+        employeeId: 'john-doe',
+        title: 'Reduced Server Costs',
+        description: 'Optimized cloud infrastructure to reduce monthly costs',
+        date: '2023-09-20',
+        impact: 'Reduced AWS costs by 30% while maintaining performance'
+      }
+    ],
+    'jane-smith': [
+      {
+        id: 'achievement2',
+        employeeId: 'jane-smith',
+        title: 'Improved Data Pipeline',
+        description: 'Redesigned ETL processes for greater efficiency',
+        date: '2023-09-15',
+        impact: 'Reduced data processing time by 45%'
+      }
+    ],
+    'alex-johnson': []
+  });
+
+  const [showAchievementForm, setShowAchievementForm] = useState(false);
+  const [newAchievementData, setNewAchievementData] = useState({
+    title: '',
+    description: '',
+    impact: ''
+  });
+  
+  // Add milestone form state
+  const [showMilestoneForm, setShowMilestoneForm] = useState(false);
+  const [newMilestoneData, setNewMilestoneData] = useState({
+    title: '',
+    description: '',
+    dueDate: '',
+    kpiId: ''
+  });
+  
+  // Add feedback-related state
+  const [feedbacks, setFeedbacks] = useState<Record<string, Array<{
+    id: string;
+    employeeId: string;
+    reviewerId: string;
+    reviewerType: 'peer' | 'manager' | 'self';
+    rating: number;
+    strengths: string;
+    improvements: string;
+    submittedAt: string;
+  }>>>({
+    'john-doe': [
+      {
+        id: '1',
+        employeeId: 'john-doe',
+        reviewerId: 'jane-smith',
+        reviewerType: 'peer',
+        rating: 4,
+        strengths: 'Excellent technical skills, always willing to help team members',
+        improvements: 'Could improve on documentation and knowledge sharing',
+        submittedAt: '2023-10-01'
+      },
+      {
+        id: '2',
+        employeeId: 'john-doe',
+        reviewerId: 'manager-1',
+        reviewerType: 'manager',
+        rating: 4.5,
+        strengths: 'Delivers high quality work consistently, great problem solver',
+        improvements: 'Should take more initiative in architecture discussions',
+        submittedAt: '2023-10-05'
+      }
+    ],
+    'jane-smith': [
+      {
+        id: '3',
+        employeeId: 'jane-smith',
+        reviewerId: 'john-doe',
+        reviewerType: 'peer',
+        rating: 4.5,
+        strengths: 'Excellent data analysis skills, clear communication',
+        improvements: 'Could benefit from more cross-functional collaboration',
+        submittedAt: '2023-10-03'
+      }
+    ],
+    'alex-johnson': []
+  });
+  
+  const [selectedReviewer, setSelectedReviewer] = useState<string | null>(null);
+  const [showFeedbackForm, setShowFeedbackForm] = useState(false);
+  const [aiSuggestionsLoading, setAiSuggestionsLoading] = useState(false);
+  const [newFeedbackData, setNewFeedbackData] = useState({
+    rating: 3,
+    strengths: '',
+    improvements: '',
+    reviewerType: 'peer' as 'peer' | 'manager' | 'self'
+  });
 
   useEffect(() => {
     const loadResumes = async () => {
@@ -1036,7 +1256,7 @@ function App() {
                 </ul>
                 <button
                   onClick={handleProcessStage}
-                  className="mt-4 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+                  className="mt-4 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors w-full"
                 >
                   Process Resumes
                 </button>
@@ -1644,23 +1864,667 @@ function App() {
       
       case 1: // Performance Tracking Stage
         return (
-          <div className="space-y-4">
-            <div className="bg-indigo-50 p-4 rounded-lg text-center">
-              <h3 className="text-lg font-semibold text-indigo-700">Performance Tracking Stage</h3>
+          <div className="space-y-8">
+            <div className="bg-indigo-50 p-4 rounded-lg">
+              <h3 className="text-lg font-semibold text-indigo-700 mb-2">Performance Tracking Dashboard</h3>
               <p className="text-gray-700">Monitor KPIs, track milestones, and record achievements</p>
             </div>
-            <p className="text-center text-gray-600">This stage is under development</p>
+            
+            <div className="flex flex-col md:flex-row gap-6">
+              {/* Employee selection sidebar */}
+              <div className="md:w-1/3">
+                <h3 className="text-lg font-semibold mb-4">Select Employee</h3>
+                <div className="space-y-3">
+                  {employees.map(employee => (
+                    <div 
+                      key={employee.id}
+                      onClick={() => setSelectedEmployee(employee.id)}
+                      className={`p-4 rounded-lg cursor-pointer ${
+                        selectedEmployee === employee.id 
+                          ? 'bg-indigo-100 border border-indigo-300' 
+                          : 'bg-white border border-gray-200 hover:border-indigo-200'
+                      }`}
+                    >
+                      <div className="flex items-center">
+                        <div className="text-2xl mr-3">{employee.avatar}</div>
+                        <div>
+                          <h4 className="font-semibold">{employee.name}</h4>
+                          <p className="text-sm text-gray-600">{employee.position}</p>
+                          <p className="text-xs text-gray-500">{employee.department}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Performance tracking area */}
+              <div className="md:w-2/3">
+                {selectedEmployee ? (
+                  <div className="space-y-6">
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-lg font-semibold">
+                        {employees.find(e => e.id === selectedEmployee)?.name}'s Performance
+                      </h3>
+                      <button
+                        onClick={() => handlePerformanceStage()}
+                        className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+                      >
+                        Next Stage
+                      </button>
+                    </div>
+                    
+                    {/* KPIs */}
+                    <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
+                      <h4 className="font-semibold text-lg mb-4">Key Performance Indicators</h4>
+                      
+                      <div className="space-y-4">
+                        {/* Example KPI cards - would be dynamic in a real implementation */}
+                        <div className="border border-gray-200 rounded-lg p-4">
+                          <div className="flex justify-between items-start mb-2">
+                            <div>
+                              <h5 className="font-semibold">Code Quality</h5>
+                              <p className="text-sm text-gray-600">Maintain code quality standards across projects</p>
+                            </div>
+                            <div className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              In Progress
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-4 mt-3">
+                            <div>
+                              <p className="text-xs text-gray-500">TARGET</p>
+                              <p className="text-sm">&lt; 3 bugs per 1000 lines of code</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500">DUE DATE</p>
+                              <p className="text-sm">2023-12-31</p>
+                            </div>
+                          </div>
+                          
+                          <div className="mt-3">
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="text-xs font-medium">Progress</span>
+                              <span className="text-xs font-medium">65%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div 
+                                className="h-2 rounded-full bg-blue-500"
+                                style={{ width: '65%' }}
+                              ></div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="border border-gray-200 rounded-lg p-4">
+                          <div className="flex justify-between items-start mb-2">
+                            <div>
+                              <h5 className="font-semibold">System Performance</h5>
+                              <p className="text-sm text-gray-600">Improve system response time</p>
+                            </div>
+                            <div className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                              At Risk
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-4 mt-3">
+                            <div>
+                              <p className="text-xs text-gray-500">TARGET</p>
+                              <p className="text-sm">&lt; 100ms response time for 99% of API requests</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500">DUE DATE</p>
+                              <p className="text-sm">2023-11-15</p>
+                            </div>
+                          </div>
+                          
+                          <div className="mt-3">
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="text-xs font-medium">Progress</span>
+                              <span className="text-xs font-medium">30%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div 
+                                className="h-2 rounded-full bg-red-500"
+                                style={{ width: '30%' }}
+                              ></div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Milestones */}
+                    <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
+                      <h4 className="font-semibold text-lg mb-4">Milestones</h4>
+                      
+                      <div className="space-y-3">
+                        {(employeeMilestones[selectedEmployee] || []).map(milestone => (
+                          <div key={milestone.id} className="flex items-start border border-gray-200 rounded-lg p-3">
+                            <input
+                              type="checkbox"
+                              checked={milestone.completed}
+                              onChange={() => handleMilestoneToggle(selectedEmployee, milestone.id)}
+                              className="mt-1 h-4 w-4 text-indigo-600 rounded"
+                            />
+                            <div className="ml-3 flex-1">
+                              <div className="flex justify-between">
+                                <h5 className={`font-medium ${milestone.completed ? 'line-through text-gray-500' : ''}`}>
+                                  {milestone.title}
+                                </h5>
+                                <span className="text-xs text-gray-500">Due: {milestone.dueDate}</span>
+                              </div>
+                              <p className="text-sm text-gray-600">{milestone.description}</p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                Linked to: {employeeKPIs[selectedEmployee]?.find(k => k.id === milestone.kpiId)?.title || 'Unknown KPI'}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+
+                        {(employeeMilestones[selectedEmployee] || []).length === 0 && (
+                          <div className="text-center py-4 text-gray-500">
+                            No milestones defined yet
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Add milestone button */}
+                      <button 
+                        className="mt-4 flex items-center text-indigo-600 hover:text-indigo-800 text-sm font-medium"
+                        onClick={() => setShowMilestoneForm(true)}
+                      >
+                        <PlusCircle className="w-4 h-4 mr-1" /> Add Milestone
+                      </button>
+                      
+                      {/* Milestone Form Modal */}
+                      {showMilestoneForm && selectedEmployee && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+                            <h3 className="text-lg font-semibold mb-4">Add New Milestone</h3>
+                            <form onSubmit={(e) => {
+                              e.preventDefault();
+                              if (newMilestoneData.title && newMilestoneData.description && newMilestoneData.dueDate && newMilestoneData.kpiId) {
+                                handleNewMilestone(selectedEmployee, newMilestoneData);
+                                setNewMilestoneData({ title: '', description: '', dueDate: '', kpiId: '' });
+                                setShowMilestoneForm(false);
+                              }
+                            }}>
+                              <div className="space-y-4">
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">Milestone Title</label>
+                                  <input 
+                                    type="text" 
+                                    value={newMilestoneData.title}
+                                    onChange={(e) => setNewMilestoneData({...newMilestoneData, title: e.target.value})}
+                                    required
+                                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                                    placeholder="E.g., Complete Code Review Process"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                                  <textarea 
+                                    value={newMilestoneData.description}
+                                    onChange={(e) => setNewMilestoneData({...newMilestoneData, description: e.target.value})}
+                                    required
+                                    rows={2}
+                                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                                    placeholder="Brief description of this milestone"
+                                  ></textarea>
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+                                  <input 
+                                    type="date" 
+                                    value={newMilestoneData.dueDate}
+                                    onChange={(e) => setNewMilestoneData({...newMilestoneData, dueDate: e.target.value})}
+                                    required
+                                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">Related KPI</label>
+                                  <select 
+                                    value={newMilestoneData.kpiId}
+                                    onChange={(e) => setNewMilestoneData({...newMilestoneData, kpiId: e.target.value})}
+                                    required
+                                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                                  >
+                                    <option value="">Select a KPI</option>
+                                    {(employeeKPIs[selectedEmployee] || []).map(kpi => (
+                                      <option key={kpi.id} value={kpi.id}>{kpi.title}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </div>
+                              <div className="flex justify-end space-x-3 mt-6">
+                                <button
+                                  type="button"
+                                  onClick={() => setShowMilestoneForm(false)}
+                                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  type="submit"
+                                  className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700"
+                                >
+                                  Add Milestone
+                                </button>
+                              </div>
+                            </form>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-gray-50 p-6 rounded-lg text-center">
+                    <Target className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+                    <p className="text-gray-600">Select an employee to track performance</p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         );
 
       case 2: // Feedback Collection Stage
         return (
-          <div className="space-y-4">
-            <div className="bg-indigo-50 p-4 rounded-lg text-center">
-              <h3 className="text-lg font-semibold text-indigo-700">Feedback Collection Stage</h3>
+          <div className="space-y-8">
+            <div className="bg-indigo-50 p-4 rounded-lg">
+              <h3 className="text-lg font-semibold text-indigo-700 mb-2">Feedback Collection</h3>
               <p className="text-gray-700">Gather peer reviews, collect manager feedback, and process self-assessments</p>
             </div>
-            <p className="text-center text-gray-600">This stage is under development</p>
+            
+            <div className="flex flex-col md:flex-row gap-6">
+              {/* Employee selection sidebar */}
+              <div className="md:w-1/3">
+                <h3 className="text-lg font-semibold mb-4">Select Employee</h3>
+                <div className="space-y-3">
+                  {employees.map(employee => (
+                    <div 
+                      key={employee.id}
+                      onClick={() => setSelectedEmployee(employee.id)}
+                      className={`p-4 rounded-lg cursor-pointer ${
+                        selectedEmployee === employee.id 
+                          ? 'bg-indigo-100 border border-indigo-300' 
+                          : 'bg-white border border-gray-200 hover:border-indigo-200'
+                      }`}
+                    >
+                      <div className="flex items-center">
+                        <div className="text-2xl mr-3">{employee.avatar}</div>
+                        <div>
+                          <h4 className="font-semibold">{employee.name}</h4>
+                          <p className="text-sm text-gray-600">{employee.position}</p>
+                          <p className="text-xs text-gray-500">{employee.department}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Feedback area */}
+              <div className="md:w-2/3">
+                {selectedEmployee ? (
+                  <div className="space-y-6">
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-lg font-semibold">
+                        {employees.find(e => e.id === selectedEmployee)?.name}'s Feedback
+                      </h3>
+                      <div className="flex space-x-3">
+                        <button
+                          onClick={() => {
+                            setNewFeedbackData({
+                              rating: 3,
+                              strengths: '',
+                              improvements: '',
+                              reviewerType: 'self'
+                            });
+                            setShowFeedbackForm(true);
+                          }}
+                          className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                        >
+                          Self Assessment
+                        </button>
+                        <button
+                          onClick={() => handlePerformanceStage()}
+                          className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+                        >
+                          Next Stage
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {/* Feedback Summary */}
+                    <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
+                      <h4 className="font-semibold text-lg mb-4">Feedback Summary</h4>
+                      
+                      {(feedbacks[selectedEmployee] || []).length > 0 ? (
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-4 mb-6">
+                            <div className="flex-1 bg-gray-100 p-4 rounded-lg">
+                              <h5 className="text-sm font-medium text-gray-500 mb-1">Peer Reviews</h5>
+                              <p className="text-2xl font-bold">
+                                {(feedbacks[selectedEmployee] || []).filter(f => f.reviewerType === 'peer').length}
+                              </p>
+                            </div>
+                            <div className="flex-1 bg-gray-100 p-4 rounded-lg">
+                              <h5 className="text-sm font-medium text-gray-500 mb-1">Manager Feedback</h5>
+                              <p className="text-2xl font-bold">
+                                {(feedbacks[selectedEmployee] || []).filter(f => f.reviewerType === 'manager').length}
+                              </p>
+                            </div>
+                            <div className="flex-1 bg-gray-100 p-4 rounded-lg">
+                              <h5 className="text-sm font-medium text-gray-500 mb-1">Self Assessment</h5>
+                              <p className="text-2xl font-bold">
+                                {(feedbacks[selectedEmployee] || []).filter(f => f.reviewerType === 'self').length}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          <div className="mb-4">
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="text-sm font-medium">Average Rating</span>
+                              <span className="text-sm font-medium">
+                                {(
+                                  feedbacks[selectedEmployee].reduce((sum, feedback) => sum + feedback.rating, 0) / 
+                                  feedbacks[selectedEmployee].length
+                                ).toFixed(1)}
+                                /5
+                              </span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div 
+                                className="h-2 rounded-full bg-indigo-500"
+                                style={{ 
+                                  width: `${(feedbacks[selectedEmployee].reduce((sum, feedback) => sum + feedback.rating, 0) / 
+                                  feedbacks[selectedEmployee].length) * 20}%` 
+                                }}
+                              ></div>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-4 text-gray-500">
+                          No feedback collected yet
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Feedback Collection */}
+                    <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
+                      <div className="flex justify-between items-center mb-4">
+                        <h4 className="font-semibold text-lg">Feedback Details</h4>
+                        <button
+                          onClick={() => {
+                            setNewFeedbackData({
+                              rating: 3,
+                              strengths: '',
+                              improvements: '',
+                              reviewerType: 'peer'
+                            });
+                            setShowFeedbackForm(true);
+                          }}
+                          className="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
+                        >
+                          + Add Feedback
+                        </button>
+                      </div>
+                      
+                      <div className="space-y-4">
+                        {(feedbacks[selectedEmployee] || []).map(feedback => (
+                          <div key={feedback.id} className="border border-gray-200 rounded-lg p-4">
+                            <div className="flex justify-between items-start mb-3">
+                              <div>
+                                <div className="flex items-center">
+                                  <span className="font-semibold mr-2">
+                                    {feedback.reviewerType === 'self' 
+                                      ? 'Self Assessment' 
+                                      : feedback.reviewerType === 'manager'
+                                        ? 'Manager Review'
+                                        : `Peer Review from ${employees.find(e => e.id === feedback.reviewerId)?.name || 'Unknown'}`}
+                                  </span>
+                                  <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded">
+                                    {feedback.submittedAt}
+                                  </span>
+                                </div>
+                                <div className="flex items-center mt-1">
+                                  <div className="flex">
+                                    {[1, 2, 3, 4, 5].map(star => (
+                                      <svg 
+                                        key={star}
+                                        className={`w-4 h-4 ${star <= feedback.rating ? 'text-yellow-400' : 'text-gray-300'}`}
+                                        fill="currentColor" 
+                                        viewBox="0 0 20 20"
+                                      >
+                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                      </svg>
+                                    ))}
+                                  </div>
+                                  <span className="ml-1 text-sm text-gray-600">{feedback.rating.toFixed(1)}/5.0</span>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                              <div className="bg-green-50 p-3 rounded">
+                                <h5 className="text-sm font-semibold text-green-800 mb-2">Strengths</h5>
+                                <p className="text-sm text-gray-700 whitespace-pre-line">{feedback.strengths}</p>
+                              </div>
+                              <div className="bg-amber-50 p-3 rounded">
+                                <h5 className="text-sm font-semibold text-amber-800 mb-2">Areas for Improvement</h5>
+                                <p className="text-sm text-gray-700 whitespace-pre-line">{feedback.improvements}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        
+                        {(feedbacks[selectedEmployee] || []).length === 0 && (
+                          <div className="text-center py-4 text-gray-500">
+                            No feedback collected yet
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Feedback Form Modal */}
+                    {showFeedbackForm && selectedEmployee && (
+                      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-lg p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+                          <h3 className="text-lg font-semibold mb-4">
+                            {newFeedbackData.reviewerType === 'self' 
+                              ? 'Self Assessment'
+                              : newFeedbackData.reviewerType === 'manager'
+                                ? 'Manager Feedback'
+                                : 'Peer Review'}
+                          </h3>
+                          
+                          <form onSubmit={(e) => {
+                            e.preventDefault();
+                            if (newFeedbackData.strengths && newFeedbackData.improvements) {
+                              // For this demo, we'll use the current user as the reviewer
+                              // In a real app, you'd use the logged-in user's ID
+                              const reviewerId = newFeedbackData.reviewerType === 'self' 
+                                ? selectedEmployee 
+                                : 'current-user-id';
+                              
+                              handleNewFeedback(
+                                selectedEmployee, 
+                                reviewerId, 
+                                newFeedbackData
+                              );
+                              setShowFeedbackForm(false);
+                            }
+                          }}>
+                            <div className="space-y-6">
+                              {newFeedbackData.reviewerType !== 'self' && (
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">Reviewer Type</label>
+                                  <select
+                                    value={newFeedbackData.reviewerType}
+                                    onChange={(e) => setNewFeedbackData({
+                                      ...newFeedbackData, 
+                                      reviewerType: e.target.value as 'peer' | 'manager' | 'self'
+                                    })}
+                                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                                  >
+                                    <option value="peer">Peer</option>
+                                    <option value="manager">Manager</option>
+                                  </select>
+                                </div>
+                              )}
+                              
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Overall Rating</label>
+                                <div className="flex items-center">
+                                  <input 
+                                    type="range" 
+                                    min="1" 
+                                    max="5" 
+                                    step="0.5"
+                                    value={newFeedbackData.rating}
+                                    onChange={(e) => setNewFeedbackData({
+                                      ...newFeedbackData, 
+                                      rating: parseFloat(e.target.value)
+                                    })}
+                                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                                  />
+                                  <span className="ml-3 text-lg font-semibold">{newFeedbackData.rating.toFixed(1)}</span>
+                                </div>
+                                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                                  <span>Needs Improvement</span>
+                                  <span>Outstanding</span>
+                                </div>
+                              </div>
+                              
+                              <div>
+                                <div className="flex justify-between items-center">
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">Strengths</label>
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      const suggestions = await generateFeedbackSuggestions(selectedEmployee, 'strengths');
+                                      if (suggestions) {
+                                        setNewFeedbackData({
+                                          ...newFeedbackData, 
+                                          strengths: suggestions
+                                        });
+                                      }
+                                    }}
+                                    className="text-xs text-indigo-600 hover:text-indigo-800 flex items-center"
+                                  >
+                                    {aiSuggestionsLoading ? (
+                                      <>
+                                        <span className="mr-1">Generating...</span>
+                                        <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <span className="mr-1">AI Suggestions</span>
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3">
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+                                        </svg>
+                                      </>
+                                    )}
+                                  </button>
+                                </div>
+                                <textarea 
+                                  value={newFeedbackData.strengths}
+                                  onChange={(e) => setNewFeedbackData({
+                                    ...newFeedbackData, 
+                                    strengths: e.target.value
+                                  })}
+                                  required
+                                  rows={5}
+                                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                                  placeholder="List key strengths and accomplishments..."
+                                ></textarea>
+                                <p className="text-xs text-gray-500 mt-1">Be specific with examples of behaviors and impact</p>
+                              </div>
+                              
+                              <div>
+                                <div className="flex justify-between items-center">
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">Areas for Improvement</label>
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      const suggestions = await generateFeedbackSuggestions(selectedEmployee, 'improvements');
+                                      if (suggestions) {
+                                        setNewFeedbackData({
+                                          ...newFeedbackData, 
+                                          improvements: suggestions
+                                        });
+                                      }
+                                    }}
+                                    className="text-xs text-indigo-600 hover:text-indigo-800 flex items-center"
+                                  >
+                                    {aiSuggestionsLoading ? (
+                                      <>
+                                        <span className="mr-1">Generating...</span>
+                                        <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <span className="mr-1">AI Suggestions</span>
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3">
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+                                        </svg>
+                                      </>
+                                    )}
+                                  </button>
+                                </div>
+                                <textarea 
+                                  value={newFeedbackData.improvements}
+                                  onChange={(e) => setNewFeedbackData({
+                                    ...newFeedbackData, 
+                                    improvements: e.target.value
+                                  })}
+                                  required
+                                  rows={5}
+                                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                                  placeholder="Suggest areas for growth and development..."
+                                ></textarea>
+                                <p className="text-xs text-gray-500 mt-1">Focus on actionable feedback, not personality</p>
+                              </div>
+                            </div>
+                            
+                            <div className="flex justify-end space-x-3 mt-6">
+                              <button
+                                type="button"
+                                onClick={() => setShowFeedbackForm(false)}
+                                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                type="submit"
+                                className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700"
+                              >
+                                Submit Feedback
+                              </button>
+                            </div>
+                          </form>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="bg-gray-50 p-6 rounded-lg text-center">
+                    <Target className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+                    <p className="text-gray-600">Select an employee to view and provide feedback</p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         );
 
@@ -1681,6 +2545,648 @@ function App() {
             <div className="bg-indigo-50 p-4 rounded-lg text-center">
               <h3 className="text-lg font-semibold text-indigo-700">Recognition & Rewards Stage</h3>
               <p className="text-gray-700">Calculate performance scores, recommend promotions/rewards, and generate recognition certificates</p>
+            </div>
+            <p className="text-center text-gray-600">This stage is under development</p>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  // Handle milestone completion toggle
+  const handleMilestoneToggle = (employeeId: string, milestoneId: string) => {
+    setEmployeeMilestones(prev => {
+      const employeeMilestoneList = [...(prev[employeeId] || [])];
+      const milestoneIndex = employeeMilestoneList.findIndex(m => m.id === milestoneId);
+      
+      if (milestoneIndex !== -1) {
+        employeeMilestoneList[milestoneIndex] = {
+          ...employeeMilestoneList[milestoneIndex],
+          completed: !employeeMilestoneList[milestoneIndex].completed
+        };
+      }
+      
+      return {
+        ...prev,
+        [employeeId]: employeeMilestoneList
+      };
+    });
+
+    // Update KPI progress based on milestone completion
+    updateKPIProgress(employeeId);
+  };
+
+  // Update KPI progress based on completed milestones
+  const updateKPIProgress = (employeeId: string) => {
+    const milestones = employeeMilestones[employeeId] || [];
+    const kpis = employeeKPIs[employeeId] || [];
+    
+    // Group milestones by KPI
+    const milestonesByKPI: Record<string, Milestone[]> = {};
+    milestones.forEach(milestone => {
+      if (!milestonesByKPI[milestone.kpiId]) {
+        milestonesByKPI[milestone.kpiId] = [];
+      }
+      milestonesByKPI[milestone.kpiId].push(milestone);
+    });
+    
+    // Update progress for each KPI
+    const updatedKPIs = kpis.map(kpi => {
+      const kpiMilestones = milestonesByKPI[kpi.id] || [];
+      if (kpiMilestones.length === 0) return kpi;
+      
+      const completedCount = kpiMilestones.filter(m => m.completed).length;
+      const progress = Math.round((completedCount / kpiMilestones.length) * 100);
+      
+      // Determine status based on progress and due date
+      let status: KPIStatus = kpi.status;
+      if (progress === 100) {
+        status = 'completed';
+      } else {
+        const today = new Date();
+        const dueDate = new Date(kpi.dueDate);
+        const daysRemaining = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 3600 * 24));
+        
+        if (daysRemaining < 7 && progress < 70) {
+          status = 'at-risk';
+        } else if (progress > 0) {
+          status = 'in-progress';
+        } else {
+          status = 'not-started';
+        }
+      }
+      
+      return { ...kpi, progress, status };
+    });
+    
+    setEmployeeKPIs(prev => ({
+      ...prev,
+      [employeeId]: updatedKPIs
+    }));
+  };
+
+  // Add new achievement
+  const handleNewAchievement = (employeeId: string, achievementData: { title: string; description: string; impact: string }) => {
+    const newAchievement: Achievement = {
+      id: Date.now().toString(),
+      employeeId,
+      title: achievementData.title,
+      description: achievementData.description,
+      date: new Date().toISOString().split('T')[0], // Current date in YYYY-MM-DD format
+      impact: achievementData.impact
+    };
+    
+    setEmployeeAchievements(prev => ({
+      ...prev,
+      [employeeId]: [...(prev[employeeId] || []), newAchievement]
+    }));
+  };
+
+  // Add new KPI
+  const handleNewKPI = (employeeId: string, kpiData: { title: string; description: string; target: string; dueDate: string }) => {
+    const newKPI: KPI = {
+      id: Date.now().toString(),
+      title: kpiData.title,
+      description: kpiData.description,
+      target: kpiData.target,
+      progress: 0,
+      status: 'not-started',
+      dueDate: kpiData.dueDate
+    };
+    
+    setEmployeeKPIs(prev => ({
+      ...prev,
+      [employeeId]: [...(prev[employeeId] || []), newKPI]
+    }));
+  };
+
+  // Add new milestone
+  const handleNewMilestone = (employeeId: string, milestoneData: { title: string; description: string; dueDate: string; kpiId: string }) => {
+    const newMilestone: Milestone = {
+      id: Date.now().toString(),
+      title: milestoneData.title,
+      description: milestoneData.description,
+      dueDate: milestoneData.dueDate,
+      completed: false,
+      kpiId: milestoneData.kpiId
+    };
+    
+    setEmployeeMilestones(prev => ({
+      ...prev,
+      [employeeId]: [...(prev[employeeId] || []), newMilestone]
+    }));
+  };
+
+  // Generate AI feedback suggestions
+  const generateFeedbackSuggestions = async (employeeId: string, reviewType: 'strengths' | 'improvements') => {
+    if (!selectedEmployee) return;
+    
+    setAiSuggestionsLoading(true);
+    
+    try {
+      const apiKey = "AIzaSyBAJ900aAaOo_SqIuneHq79VqofYyOyfNU";
+      const apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
+      
+      const employee = employees.find(e => e.id === employeeId);
+      const currentEmployeeKPIs = employeeKPIs[employeeId] || [];
+      const currentEmployeeMilestones = employeeMilestones[employeeId] || [];
+      
+      // Calculate some metrics for context
+      const completedMilestones = currentEmployeeMilestones.filter(m => m.completed).length;
+      const totalMilestones = currentEmployeeMilestones.length;
+      const completionRate = totalMilestones > 0 ? (completedMilestones / totalMilestones) * 100 : 0;
+      const atRiskKPIs = currentEmployeeKPIs.filter(k => k.status === 'at-risk').length;
+      
+      // Create a detailed prompt with employee context
+      const prompt = `
+        Generate professional feedback for a performance review of an employee who is a ${employee?.position || 'professional'} in the ${employee?.department || 'organization'}.
+
+        Context about the employee:
+        - Position: ${employee?.position || 'Not specified'}
+        - Department: ${employee?.department || 'Not specified'}
+        - Milestone completion rate: ${completionRate.toFixed(0)}% (${completedMilestones} completed out of ${totalMilestones})
+        - KPIs at risk: ${atRiskKPIs}
+        
+        ${currentEmployeeKPIs.length > 0 ? `Current KPIs: ${currentEmployeeKPIs.map(k => k.title).join(', ')}` : ''}
+        ${currentEmployeeMilestones.length > 0 ? `Recent milestones: ${currentEmployeeMilestones.map(m => m.title).join(', ')}` : ''}
+
+        I need detailed, specific feedback on ${reviewType === 'strengths' ? 'strengths and positive qualities' : 'areas for improvement and development opportunities'}.
+        
+        Format your response as a bulleted list with 4-5 points, each beginning with "• ".
+        Each point should be specific, actionable, and professionally phrased.
+        Each point should be 1-2 sentences long.
+        Do NOT include any other text, introduction or conclusion.
+      `;
+      
+      // Make the API call
+      const response = await fetch(`${apiUrl}?key=${apiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  text: prompt
+                }
+              ]
+            }
+          ],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 800,
+          }
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // Extract the generated text
+      let suggestions = data.candidates[0]?.content?.parts[0]?.text || '';
+      
+      // Ensure the text is properly formatted with bullet points
+      if (!suggestions.includes('•')) {
+        suggestions = suggestions.split('\n')
+          .filter(line => line.trim().length > 0)
+          .map(line => `• ${line.trim()}`)
+          .join('\n');
+      }
+      
+      return suggestions;
+    } catch (error) {
+      console.error('Error generating feedback suggestions:', error);
+      // Fallback suggestions
+      return reviewType === 'strengths' 
+        ? "• Shows good technical skills\n• Works well with the team\n• Delivers consistently\n• Shows initiative in problem-solving"
+        : "• Could improve communication\n• Should focus on documentation\n• Would benefit from more collaboration\n• Consider deeper domain learning";
+    } finally {
+      setAiSuggestionsLoading(false);
+    }
+  };
+  
+  // Handle new feedback submission
+  const handleNewFeedback = (employeeId: string, reviewerId: string, feedbackData: {
+    rating: number;
+    strengths: string;
+    improvements: string;
+    reviewerType: 'peer' | 'manager' | 'self';
+  }) => {
+    const newFeedback = {
+      id: Date.now().toString(),
+      employeeId,
+      reviewerId,
+      reviewerType: feedbackData.reviewerType,
+      rating: feedbackData.rating,
+      strengths: feedbackData.strengths,
+      improvements: feedbackData.improvements,
+      submittedAt: new Date().toISOString().split('T')[0] // Current date in YYYY-MM-DD format
+    };
+    
+    setFeedbacks(prev => ({
+      ...prev,
+      [employeeId]: [...(prev[employeeId] || []), newFeedback]
+    }));
+  };
+
+  // Add the handleLeaveStage function
+  const handleLeaveStage = () => {
+    if (leaveStage < 4) {
+      setLeaveStage(leaveStage + 1);
+    }
+  };
+
+  // Add the handleNewLeaveRequest function
+  const handleNewLeaveRequest = () => {
+    if (!newLeaveRequest.employeeId || !newLeaveRequest.startDate || !newLeaveRequest.endDate) {
+      return;
+    }
+    
+    // Calculate duration (simple implementation - could be enhanced for working days only)
+    const start = new Date(newLeaveRequest.startDate);
+    const end = new Date(newLeaveRequest.endDate);
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    
+    const request: LeaveRequest = {
+      id: Date.now().toString(),
+      employeeId: newLeaveRequest.employeeId,
+      type: newLeaveRequest.type,
+      startDate: newLeaveRequest.startDate,
+      endDate: newLeaveRequest.endDate,
+      duration: diffDays,
+      status: 'pending',
+      requestDate: new Date().toISOString().split('T')[0]
+    };
+    
+    setLeaveRequests([...leaveRequests, request]);
+    
+    // Reset form
+    setNewLeaveRequest({
+      employeeId: '',
+      type: 'vacation',
+      startDate: '',
+      endDate: ''
+    });
+    
+    setShowLeaveForm(false);
+  };
+
+  // Add the handleLeaveAction function
+  const handleLeaveAction = (requestId: string, action: 'approve' | 'reject', notes?: string) => {
+    setLeaveRequests(prev => prev.map(request => {
+      if (request.id === requestId) {
+        // If approved, update leave balance
+        if (action === 'approve' && request.status === 'pending') {
+          setLeaveBalances(prev => prev.map(balance => {
+            if (balance.employeeId === request.employeeId) {
+              const updatedBalance = { ...balance };
+              if (request.type === 'vacation') {
+                updatedBalance.vacation -= request.duration;
+              } else if (request.type === 'sick') {
+                updatedBalance.sick -= request.duration;
+              } else if (request.type === 'personal') {
+                updatedBalance.personal -= request.duration;
+              }
+              return updatedBalance;
+            }
+            return balance;
+          }));
+        }
+        
+        return {
+          ...request,
+          status: action === 'approve' ? 'approved' : 'rejected',
+          approverNotes: notes
+        };
+      }
+      return request;
+    }));
+  };
+
+  // Add a function to get employee leave balance
+  const getEmployeeLeaveBalance = (employeeId: string): LeaveBalance | undefined => {
+    return leaveBalances.find(balance => balance.employeeId === employeeId);
+  };
+
+  // Add the renderLeaveContent function
+  const renderLeaveContent = () => {
+    switch (leaveStage) {
+      case 0: // Leave Request Stage
+        return (
+          <div className="space-y-8">
+            <div className="bg-indigo-50 p-4 rounded-lg">
+              <h3 className="text-lg font-semibold text-indigo-700 mb-2">Leave Request Dashboard</h3>
+              <p className="text-gray-700">Submit and manage time off requests with intelligent coverage analysis</p>
+            </div>
+            
+            <div className="flex flex-col md:flex-row gap-6">
+              {/* Employee selection sidebar */}
+              <div className="md:w-1/3">
+                <h3 className="text-lg font-semibold mb-4">Select Employee</h3>
+                <div className="space-y-3">
+                  {employees.map(employee => (
+                    <div 
+                      key={employee.id}
+                      onClick={() => setSelectedEmployee(employee.id)}
+                      className={`p-4 rounded-lg cursor-pointer ${
+                        selectedEmployee === employee.id 
+                          ? 'bg-indigo-100 border border-indigo-300' 
+                          : 'bg-white border border-gray-200 hover:border-indigo-200'
+                      }`}
+                    >
+                      <div className="flex items-center">
+                        <div className="text-2xl mr-3">{employee.avatar}</div>
+                        <div>
+                          <h4 className="font-semibold">{employee.name}</h4>
+                          <p className="text-sm text-gray-600">{employee.position}</p>
+                          <p className="text-xs text-gray-500">{employee.department}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Leave management area */}
+              <div className="md:w-2/3">
+                {selectedEmployee ? (
+                  <div className="space-y-6">
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-lg font-semibold">
+                        {employees.find(e => e.id === selectedEmployee)?.name}'s Leave Management
+                      </h3>
+                      <div className="flex space-x-3">
+                        <button
+                          onClick={() => {
+                            setNewLeaveRequest({
+                              ...newLeaveRequest,
+                              employeeId: selectedEmployee
+                            });
+                            setShowLeaveForm(true);
+                          }}
+                          className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                        >
+                          Request Leave
+                        </button>
+                        <button
+                          onClick={() => handleLeaveStage()}
+                          className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+                        >
+                          Next Stage
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {/* Leave Balance */}
+                    <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
+                      <h4 className="font-semibold text-lg mb-4">Leave Balance</h4>
+                      
+                      {getEmployeeLeaveBalance(selectedEmployee) ? (
+                        <div className="grid grid-cols-3 gap-4">
+                          <div className="bg-blue-50 p-4 rounded-lg text-center">
+                            <h5 className="text-sm font-medium text-gray-500 mb-1">Vacation</h5>
+                            <p className="text-2xl font-bold text-blue-600">
+                              {getEmployeeLeaveBalance(selectedEmployee)?.vacation || 0}
+                            </p>
+                            <p className="text-xs text-gray-500">days remaining</p>
+                          </div>
+                          <div className="bg-green-50 p-4 rounded-lg text-center">
+                            <h5 className="text-sm font-medium text-gray-500 mb-1">Sick Leave</h5>
+                            <p className="text-2xl font-bold text-green-600">
+                              {getEmployeeLeaveBalance(selectedEmployee)?.sick || 0}
+                            </p>
+                            <p className="text-xs text-gray-500">days remaining</p>
+                          </div>
+                          <div className="bg-purple-50 p-4 rounded-lg text-center">
+                            <h5 className="text-sm font-medium text-gray-500 mb-1">Personal</h5>
+                            <p className="text-2xl font-bold text-purple-600">
+                              {getEmployeeLeaveBalance(selectedEmployee)?.personal || 0}
+                            </p>
+                            <p className="text-xs text-gray-500">days remaining</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-4 text-gray-500">
+                          No leave balance information available
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Leave Requests */}
+                    <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
+                      <h4 className="font-semibold text-lg mb-4">Leave Requests</h4>
+                      
+                      <div className="space-y-4">
+                        {leaveRequests.filter(request => request.employeeId === selectedEmployee).length > 0 ? (
+                          leaveRequests
+                            .filter(request => request.employeeId === selectedEmployee)
+                            .map(request => (
+                              <div key={request.id} className="border border-gray-200 rounded-lg p-4">
+                                <div className="flex justify-between items-start">
+                                  <div>
+                                    <div className="flex items-center">
+                                      <span className="font-semibold capitalize">{request.type} Leave</span>
+                                      <span className={`ml-2 px-2 py-0.5 text-xs font-medium rounded-full ${
+                                        request.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                        request.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                        'bg-yellow-100 text-yellow-800'
+                                      }`}>
+                                        {request.status}
+                                      </span>
+                                    </div>
+                                    <p className="text-sm text-gray-600 mt-1">
+                                      {request.startDate} to {request.endDate} ({request.duration} days)
+                                    </p>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      Requested on {request.requestDate}
+                                    </p>
+                                    {request.approverNotes && (
+                                      <p className="text-sm italic mt-2 text-gray-600">
+                                        Note: {request.approverNotes}
+                                      </p>
+                                    )}
+                                  </div>
+                                  {request.status === 'pending' && (
+                                    <div className="flex space-x-2">
+                                      <button
+                                        onClick={() => handleLeaveAction(request.id, 'approve')}
+                                        className="bg-green-100 text-green-800 px-3 py-1 rounded text-xs font-medium"
+                                      >
+                                        Approve
+                                      </button>
+                                      <button
+                                        onClick={() => handleLeaveAction(request.id, 'reject')}
+                                        className="bg-red-100 text-red-800 px-3 py-1 rounded text-xs font-medium"
+                                      >
+                                        Reject
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))
+                        ) : (
+                          <div className="text-center py-4 text-gray-500">
+                            No leave requests found
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Leave Request Form Modal */}
+                    {showLeaveForm && (
+                      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-lg p-6 w-full max-w-md">
+                          <h3 className="text-lg font-semibold mb-4">Request Leave</h3>
+                          <form onSubmit={(e) => {
+                            e.preventDefault();
+                            handleNewLeaveRequest();
+                          }}>
+                            <div className="space-y-4">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Leave Type</label>
+                                <select
+                                  value={newLeaveRequest.type}
+                                  onChange={(e) => setNewLeaveRequest({
+                                    ...newLeaveRequest,
+                                    type: e.target.value as any
+                                  })}
+                                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                                >
+                                  <option value="vacation">Vacation</option>
+                                  <option value="sick">Sick Leave</option>
+                                  <option value="personal">Personal Leave</option>
+                                  <option value="parental">Parental Leave</option>
+                                  <option value="bereavement">Bereavement</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                                <input
+                                  type="date"
+                                  value={newLeaveRequest.startDate}
+                                  onChange={(e) => setNewLeaveRequest({
+                                    ...newLeaveRequest,
+                                    startDate: e.target.value
+                                  })}
+                                  required
+                                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                                <input
+                                  type="date"
+                                  value={newLeaveRequest.endDate}
+                                  onChange={(e) => setNewLeaveRequest({
+                                    ...newLeaveRequest,
+                                    endDate: e.target.value
+                                  })}
+                                  required
+                                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                                />
+                              </div>
+                            </div>
+                            <div className="flex justify-end space-x-3 mt-6">
+                              <button
+                                type="button"
+                                onClick={() => setShowLeaveForm(false)}
+                                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                type="submit"
+                                className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700"
+                              >
+                                Submit Request
+                              </button>
+                            </div>
+                          </form>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="bg-gray-50 p-6 rounded-lg text-center">
+                    <Calendar className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+                    <p className="text-gray-600">Select an employee to manage leave requests</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      
+      // Add cases for the other leave management stages  
+      case 1: // Coverage Analysis
+        return (
+          <div className="space-y-4">
+            <div className="bg-indigo-50 p-4 rounded-lg text-center">
+              <h3 className="text-lg font-semibold text-indigo-700">Team Coverage Analysis</h3>
+              <p className="text-gray-700">AI-powered analysis of team availability and workload impact</p>
+            </div>
+            <p className="text-center text-gray-600">This stage is under development</p>
+            
+            <button
+              onClick={() => handleLeaveStage()}
+              className="mx-auto block bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+            >
+              Next Stage
+            </button>
+          </div>
+        );
+        
+      case 2: // Approval Process
+        return (
+          <div className="space-y-4">
+            <div className="bg-indigo-50 p-4 rounded-lg text-center">
+              <h3 className="text-lg font-semibold text-indigo-700">Approval Workflow</h3>
+              <p className="text-gray-700">Rule-based approval routing and policy compliance checks</p>
+            </div>
+            <p className="text-center text-gray-600">This stage is under development</p>
+            
+            <button
+              onClick={() => handleLeaveStage()}
+              className="mx-auto block bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+            >
+              Next Stage
+            </button>
+          </div>
+        );
+        
+      case 3: // Calendar Integration
+        return (
+          <div className="space-y-4">
+            <div className="bg-indigo-50 p-4 rounded-lg text-center">
+              <h3 className="text-lg font-semibold text-indigo-700">Calendar Integration</h3>
+              <p className="text-gray-700">Automatic updates to team calendars and work systems</p>
+            </div>
+            <p className="text-center text-gray-600">This stage is under development</p>
+            
+            <button
+              onClick={() => handleLeaveStage()}
+              className="mx-auto block bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+            >
+              Next Stage
+            </button>
+          </div>
+        );
+        
+      case 4: // Leave Tracking
+        return (
+          <div className="space-y-4">
+            <div className="bg-indigo-50 p-4 rounded-lg text-center">
+              <h3 className="text-lg font-semibold text-indigo-700">Leave Analytics</h3>
+              <p className="text-gray-700">Advanced reporting and predictive staffing insights</p>
             </div>
             <p className="text-center text-gray-600">This stage is under development</p>
           </div>
@@ -1745,6 +3251,7 @@ function App() {
 
               {selectedAgent === 'recruitment' && renderRecruitmentContent()}
               {selectedAgent === 'performance' && renderPerformanceContent()}
+              {selectedAgent === 'leave' && renderLeaveContent()}
 
               <div className="space-y-6">
                 {selectedAgentData?.workflow.map((stage, index) => (

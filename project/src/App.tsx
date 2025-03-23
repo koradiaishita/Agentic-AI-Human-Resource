@@ -1228,400 +1228,449 @@ function App() {
   const selectedAgentData = agents.find(agent => agent.id === selectedAgent);
 
   const renderRecruitmentContent = () => {
-    switch (currentStage) {
-      case 0:
-        return (
-          <div className="mb-8">
-            <div {...getRootProps()} className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-indigo-500 transition-colors">
-              <input {...getInputProps()} />
-              <Upload className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-              {isDragActive ? (
-                <p className="text-indigo-600">Drop the resumes here...</p>
-              ) : (
-                <p className="text-gray-500">Drag & drop resumes here, or click to select files</p>
-              )}
-              <p className="text-sm text-gray-400 mt-2">Supports PDF, DOC, DOCX, TXT</p>
+    // Split into candidate side and HR side stages
+    const isCandidateSide = currentStage <= 2; // Resume upload, ATS screening, Video interview
+    const isHRSide = currentStage > 2; // Accept/reject, onboarding
+    
+    return (
+      <div className="space-y-8">
+        {/* Stage progression indicator */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-blue-800">
+              {isCandidateSide ? "Candidate Application Process" : "HR Selection & Onboarding"}
+            </h2>
+            <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+              Stage {currentStage + 1}/5
             </div>
-            
-            {uploadedFiles.length > 0 && (
-              <div className="mt-4">
-                <h3 className="font-semibold mb-2">Uploaded Resumes:</h3>
-                <ul className="space-y-2">
-                  {uploadedFiles.map((file, index) => (
-                    <li key={index} className="flex items-center space-x-2 text-sm">
-                      <FileText className="w-4 h-4 text-gray-500" />
-                      <span>{file.name}</span>
-                    </li>
-                  ))}
-                </ul>
-                <button
-                  onClick={handleProcessStage}
-                  className="mt-4 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors w-full"
-                >
-                  Process Resumes
-                </button>
-              </div>
-            )}
           </div>
-        );
-
-      case 1:
-        return (
-          <div className="space-y-6">
-            <h3 className="text-xl font-semibold">ATS Screening Results</h3>
-            {Object.entries(candidates).map(([id, candidate]) => (
-              <div key={id} className="bg-white p-6 rounded-lg shadow-md">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h4 className="text-lg font-semibold">{candidate.name}</h4>
-                    <p className="text-gray-600">{candidate.role}</p>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-2xl font-bold text-indigo-600">{candidate.score}%</div>
-                    <div className="text-sm text-gray-500">Match Score</div>
-                  </div>
+          
+          <div className="flex items-center justify-between">
+            {selectedAgentData?.workflow.map((stage, index) => (
+              <div key={index} className="flex flex-col items-center">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${
+                  index < currentStage 
+                    ? 'bg-blue-600 text-white' 
+                    : index === currentStage 
+                      ? 'bg-blue-500 text-white' 
+                      : 'bg-gray-200 text-gray-500'
+                }`}>
+                  {React.cloneElement(stage.icon, { className: "w-5 h-5" })}
                 </div>
-                <div className="mt-4 flex justify-end space-x-4">
-                  <button
-                    onClick={() => {
-                      setSelectedCandidate(id);
-                      handleProcessStage();
-                    }}
-                    className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
-                  >
-                    Schedule Interview
-                  </button>
-                </div>
+                <div className="text-xs text-center font-medium text-gray-600">{stage.stage}</div>
               </div>
             ))}
           </div>
-        );
-
-      case 2:
-        return (
-          <div className="space-y-6">
-            <h3 className="text-xl font-semibold">Video Interview</h3>
-            {selectedCandidate && (
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <div className="flex justify-between items-center mb-6">
-                  <div>
-                    <h4 className="text-lg font-semibold">{candidates[selectedCandidate].name}</h4>
-                    <p className="text-gray-600">{candidates[selectedCandidate].role}</p>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow-md p-6">
+          {/* Content label */}
+          <div className="mb-6">
+            <div className="inline-block bg-gradient-to-r from-blue-600 to-blue-800 text-white px-4 py-2 rounded-lg text-sm font-semibold">
+              {isCandidateSide ? "Candidate Side" : "HR Side"}
+            </div>
+          </div>
+          
+          {/* Stage content */}
+          {(() => {
+            switch (currentStage) {
+              case 0:
+                return (
+                  <div className="mb-8">
+                    <div {...getRootProps()} className="border-2 border-dashed border-blue-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-500 transition-colors">
+                      <input {...getInputProps()} />
+                      <Upload className="w-12 h-12 mx-auto mb-4 text-blue-400" />
+                      {isDragActive ? (
+                        <p className="text-blue-600">Drop the resumes here...</p>
+                      ) : (
+                        <p className="text-gray-500">Drag & drop resumes here, or click to select files</p>
+                      )}
+                      <p className="text-sm text-gray-400 mt-2">Supports PDF, DOC, DOCX, TXT</p>
+                    </div>
+                    
+                    {uploadedFiles.length > 0 && (
+                      <div className="mt-4">
+                        <h3 className="font-semibold mb-2">Uploaded Resumes:</h3>
+                        <ul className="space-y-2">
+                          {uploadedFiles.map((file, index) => (
+                            <li key={index} className="flex items-center space-x-2 text-sm">
+                              <FileText className="w-4 h-4 text-blue-500" />
+                              <span>{file.name}</span>
+                            </li>
+                          ))}
+                        </ul>
+                        <button
+                          onClick={handleProcessStage}
+                          className="mt-4 bg-gradient-to-r from-blue-600 to-blue-800 text-white px-4 py-2 rounded-lg hover:opacity-90 transition-opacity w-full"
+                        >
+                          Process Resumes
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  <Video className="w-6 h-6 text-indigo-600" />
-                </div>
-                
-                {interviewSummary ? (
+                );
+
+              case 1:
+                return (
                   <div className="space-y-6">
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <h5 className="font-semibold mb-2">Interview Summary</h5>
-                      <div className="text-gray-700" dangerouslySetInnerHTML={{ __html: interviewSummary }}></div>
-                    </div>
-                    
-                    <div className="flex gap-4">
-                      <button
-                        onClick={() => {
-                          handleCandidateAction(selectedCandidate, 'accept');
-                          handleProcessStage();
-                          setInterviewSummary(null);
-                        }}
-                        className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
-                      >
-                        Accept Candidate
-                      </button>
-                      <button
-                        onClick={() => {
-                          handleCandidateAction(selectedCandidate, 'reject');
-                          handleProcessStage();
-                          setInterviewSummary(null);
-                        }}
-                        className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
-                      >
-                        Reject Candidate
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                <button
-                  onClick={() => setShowVideoInterview(true)}
-                  className="w-full bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
-                >
-                  Start Video Interview
-                </button>
-                )}
-              </div>
-            )}
-            {showVideoInterview && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-lg p-6 max-w-2xl w-full">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-xl font-semibold">Video Interview</h3>
-                    <button
-                      onClick={() => setShowVideoInterview(false)}
-                      className="text-gray-500 hover:text-gray-700"
-                    >
-                      <X className="w-6 h-6" />
-                    </button>
-                  </div>
-                  <VideoInterview 
-                    onComplete={handleVideoInterviewComplete} 
-                    role={selectedCandidate ? candidates[selectedCandidate].role : undefined}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-        );
-
-      case 3:
-        return (
-          <div className="space-y-6">
-            <h3 className="text-xl font-semibold">Interview Assessment</h3>
-            {selectedCandidate && (
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <div className="flex justify-between items-start mb-6">
-                  <div>
-                    <h4 className="text-lg font-semibold">{candidates[selectedCandidate].name}</h4>
-                    <p className="text-gray-600">{candidates[selectedCandidate].role}</p>
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <button
-                    onClick={() => {
-                      handleCandidateAction(selectedCandidate, 'accept');
-                      handleProcessStage();
-                    }}
-                    className="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
-                  >
-                    Accept Candidate
-                  </button>
-                  <button
-                    onClick={() => {
-                      handleCandidateAction(selectedCandidate, 'reject');
-                      handleProcessStage();
-                    }}
-                    className="w-full bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
-                  >
-                    Reject Candidate
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        );
-
-      case 4:
-        return (
-          <div className="space-y-6">
-            <h3 className="text-xl font-semibold">Onboarding</h3>
-            {selectedCandidate && candidates[selectedCandidate].status === 'accept' && !offerLetterSent && (
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <div className="flex items-center justify-center mb-6">
-                  <div className="bg-blue-100 text-blue-800 px-4 py-2 rounded-full">
-                    Offer Letter
-                  </div>
-                </div>
-                
-                <div className="border border-gray-200 p-6 rounded-lg mb-6">
-                  <div className="text-center mb-6">
-                    <h3 className="text-xl font-bold">OFFER LETTER</h3>
-                    <p className="text-gray-500">Reference: OL-{Math.floor(Math.random() * 10000)}</p>
-                  </div>
-                  
-                <div className="space-y-4">
-                    <p>Date: {new Date().toLocaleDateString()}</p>
-                    
-                    <p>Dear {candidates[selectedCandidate].name},</p>
-                    
-                    <p>We are pleased to offer you the position of <strong>{candidates[selectedCandidate].role}</strong> at our company. This letter outlines the terms and conditions of your employment.</p>
-                    
-                    <div className="space-y-2">
-                      <p><strong>Start Date:</strong> {new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString()}</p>
-                      <p><strong>Salary:</strong> ${(80000 + Math.floor(Math.random() * 40000)).toLocaleString()} per annum</p>
-                      <p><strong>Location:</strong> Hybrid (3 days in office, 2 days remote)</p>
-                      <p><strong>Reporting To:</strong> Team Lead, {candidates[selectedCandidate].role}</p>
-                    </div>
-                    
-                    <p>Please confirm your acceptance by signing and returning this letter.</p>
-                    
-                    <p>Sincerely,<br />HR Department</p>
-                  </div>
-                </div>
-                
-                <button
-                  onClick={() => setOfferLetterSent(true)}
-                  className="w-full bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
-                >
-                  Send Offer Letter to Candidate
-                </button>
-              </div>
-            )}
-            
-            {selectedCandidate && candidates[selectedCandidate].status === 'accept' && offerLetterSent && !documentationComplete && (
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <div className="flex items-center justify-center mb-6">
-                  <div className="bg-blue-100 text-blue-800 px-4 py-2 rounded-full">
-                    Documentation Process
-                  </div>
-                </div>
-                
-                <div className="space-y-4">
-                  <p className="text-center">The offer letter has been sent to {candidates[selectedCandidate].name}.</p>
-                  
-                  <h4 className="font-semibold">Required Documents:</h4>
-                  <ul className="space-y-2">
-                    <li className="flex items-center space-x-2">
-                      <CheckCircle2 className="w-5 h-5 text-gray-400" />
-                      <span>Signed Offer Letter</span>
-                    </li>
-                    <li className="flex items-center space-x-2">
-                      <CheckCircle2 className="w-5 h-5 text-gray-400" />
-                      <span>Identity Proof</span>
-                    </li>
-                    <li className="flex items-center space-x-2">
-                      <CheckCircle2 className="w-5 h-5 text-gray-400" />
-                      <span>Address Proof</span>
-                    </li>
-                    <li className="flex items-center space-x-2">
-                      <CheckCircle2 className="w-5 h-5 text-gray-400" />
-                      <span>Educational Certificates</span>
-                    </li>
-                    <li className="flex items-center space-x-2">
-                      <CheckCircle2 className="w-5 h-5 text-gray-400" />
-                      <span>Previous Employment Records</span>
-                    </li>
-                  </ul>
-                </div>
-                
-                <button
-                  onClick={() => setDocumentationComplete(true)}
-                  className="w-full bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors mt-6"
-                >
-                  Complete Documentation Process
-                </button>
-              </div>
-            )}
-            
-            {selectedCandidate && candidates[selectedCandidate].status === 'accept' && documentationComplete && (
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <div className="flex items-center justify-center mb-6">
-                  <div className="bg-green-100 text-green-800 px-4 py-2 rounded-full flex items-center">
-                    <CheckCircle2 className="w-5 h-5 mr-2" />
-                    Onboarding Complete
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <h4 className="font-semibold text-green-700">Onboarding Checklist Completed</h4>
-                  <ul className="space-y-2">
-                    <li className="flex items-center space-x-2">
-                      <CheckCircle2 className="w-5 h-5 text-green-600" />
-                      <span>Offer letter accepted</span>
-                    </li>
-                    <li className="flex items-center space-x-2">
-                      <CheckCircle2 className="w-5 h-5 text-green-600" />
-                      <span>Documentation completed</span>
-                    </li>
-                    <li className="flex items-center space-x-2">
-                      <CheckCircle2 className="w-5 h-5 text-green-600" />
-                      <span>Welcome package prepared</span>
-                    </li>
-                    <li className="flex items-center space-x-2">
-                      <CheckCircle2 className="w-5 h-5 text-green-600" />
-                      <span>IT equipment assigned</span>
-                    </li>
-                    <li className="flex items-center space-x-2">
-                      <CheckCircle2 className="w-5 h-5 text-green-600" />
-                      <span>First-day orientation scheduled</span>
-                    </li>
-                  </ul>
-                  
-                  <div className="bg-green-50 p-4 rounded-lg mt-4 border border-green-200">
-                    <div className="flex items-center">
-                      <PartyPopper className="w-6 h-6 text-green-600 mr-2" />
-                      <p className="text-green-800 font-semibold">Candidate is ready to join on {new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString()}!</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {selectedCandidate && candidates[selectedCandidate].status === 'reject' && !rejectionEmailSent && (
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <div className="flex items-center justify-center mb-6">
-                  <div className="bg-red-100 text-red-800 px-4 py-2 rounded-full flex items-center">
-                    <XCircle className="w-5 h-5 mr-2" />
-                    Candidate Not Selected
-                  </div>
-                </div>
-                
-                <div className="border border-gray-200 p-6 rounded-lg mb-6">
-                  <div className="border-b border-gray-200 pb-4 mb-4">
-                    <div className="flex justify-between">
-                      <div>
-                        <p className="text-sm text-gray-500">To:</p>
-                        <p>{candidates[selectedCandidate].name} &lt;{candidates[selectedCandidate].name.toLowerCase().replace(' ', '.')}@example.com&gt;</p>
+                    <h3 className="text-xl font-semibold text-blue-800">ATS Screening Results</h3>
+                    {Object.entries(candidates).map(([id, candidate]) => (
+                      <div key={id} className="bg-gradient-to-r from-blue-50 to-blue-100 p-6 rounded-lg shadow-md">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h4 className="text-lg font-semibold">{candidate.name}</h4>
+                            <p className="text-gray-600">{candidate.role}</p>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-2xl font-bold text-blue-600">{candidate.score}%</div>
+                            <div className="text-sm text-gray-500">Match Score</div>
+                          </div>
+                        </div>
+                        <div className="mt-4 flex justify-end space-x-4">
+                          <button
+                            onClick={() => {
+                              setSelectedCandidate(id);
+                              handleProcessStage();
+                            }}
+                            className="bg-gradient-to-r from-blue-600 to-blue-800 text-white px-4 py-2 rounded-lg hover:opacity-90 transition-opacity"
+                          >
+                            Schedule Interview
+                          </button>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm text-gray-500">Date:</p>
-                        <p>{new Date().toLocaleDateString()}</p>
-                      </div>
-                    </div>
-                    <div className="mt-3">
-                      <p className="text-sm text-gray-500">From:</p>
-                      <p>HR Department &lt;hr@yourcompany.com&gt;</p>
-                    </div>
-                    <div className="mt-3">
-                      <p className="text-sm text-gray-500">Subject:</p>
-                      <p>Regarding Your Application for {candidates[selectedCandidate].role} Position</p>
-                    </div>
+                    ))}
                   </div>
-                  
-                  <div className="space-y-4 text-gray-700">
-                    <p>Dear {candidates[selectedCandidate].name},</p>
-                    
-                    <p>Thank you for your interest in the {candidates[selectedCandidate].role} position at our company and for taking the time to interview with us.</p>
-                    
-                    <p>After careful consideration, we have decided to move forward with other candidates whose qualifications and experience better align with our current needs. This decision was not easy, as we were impressed with many aspects of your background.</p>
-                    
-                    <p>We appreciate your interest in our company and would like to encourage you to apply for future positions that match your skills and experience. We will keep your resume on file and contact you if a suitable position becomes available.</p>
-                    
-                    <p>We wish you all the best in your job search and future career endeavors.</p>
-                    
-                    <p>Sincerely,<br />The HR Team</p>
-                  </div>
-                </div>
-                
-                <button
-                  onClick={() => setRejectionEmailSent(true)}
-                  className="w-full bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
-                >
-                  Send Rejection Email
-                </button>
-              </div>
-            )}
-            
-            {selectedCandidate && candidates[selectedCandidate].status === 'reject' && rejectionEmailSent && (
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <div className="flex items-center justify-center mb-6">
-                  <div className="bg-green-100 text-green-800 px-4 py-2 rounded-full flex items-center">
-                    <CheckCircle2 className="w-5 h-5 mr-2" />
-                    Rejection Email Sent
-                  </div>
-                </div>
-                <p className="text-center text-gray-600 mb-4">
-                  The rejection email has been sent to {candidates[selectedCandidate].name}.
-                </p>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-gray-600">The recruitment process for this candidate has been completed.</p>
-                </div>
-              </div>
-            )}
-          </div>
-        );
+                );
 
-      default:
-        return null;
-    }
+              case 2:
+                return (
+                  <div className="space-y-6">
+                    <h3 className="text-xl font-semibold text-blue-800">Video Interview</h3>
+                    {selectedCandidate && (
+                      <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-6 rounded-lg shadow-md">
+                        <div className="flex justify-between items-center mb-6">
+                          <div>
+                            <h4 className="text-lg font-semibold">{candidates[selectedCandidate].name}</h4>
+                            <p className="text-gray-600">{candidates[selectedCandidate].role}</p>
+                          </div>
+                          <Video className="w-6 h-6 text-blue-600" />
+                        </div>
+                        
+                        {interviewSummary ? (
+                          <div className="space-y-6">
+                            <div className="bg-blue-50 p-4 rounded-lg">
+                              <h5 className="font-semibold mb-2 text-blue-800">Interview Summary</h5>
+                              <div className="text-gray-700" dangerouslySetInnerHTML={{ __html: interviewSummary }}></div>
+                            </div>
+                            
+                            <div className="flex gap-4">
+                              <button
+                                onClick={() => {
+                                  handleCandidateAction(selectedCandidate, 'accept');
+                                  handleProcessStage();
+                                  setInterviewSummary(null);
+                                }}
+                                className="flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white px-4 py-2 rounded-lg hover:opacity-90 transition-opacity"
+                              >
+                                Accept Candidate
+                              </button>
+                              <button
+                                onClick={() => {
+                                  handleCandidateAction(selectedCandidate, 'reject');
+                                  handleProcessStage();
+                                  setInterviewSummary(null);
+                                }}
+                                className="flex-1 bg-gradient-to-r from-red-500 to-red-600 text-white px-4 py-2 rounded-lg hover:opacity-90 transition-opacity"
+                              >
+                                Reject Candidate
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                        <button
+                          onClick={() => setShowVideoInterview(true)}
+                          className="w-full bg-gradient-to-r from-blue-600 to-blue-800 text-white px-4 py-2 rounded-lg hover:opacity-90 transition-opacity"
+                        >
+                          Start Video Interview
+                        </button>
+                        )}
+                      </div>
+                    )}
+                    {showVideoInterview && (
+                      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                        <div className="bg-white rounded-lg p-6 max-w-2xl w-full">
+                          <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-xl font-semibold text-blue-800">Video Interview</h3>
+                            <button
+                              onClick={() => setShowVideoInterview(false)}
+                              className="text-gray-500 hover:text-gray-700"
+                            >
+                              <X className="w-6 h-6" />
+                            </button>
+                          </div>
+                          <VideoInterview 
+                            onComplete={handleVideoInterviewComplete} 
+                            role={selectedCandidate ? candidates[selectedCandidate].role : undefined}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+
+              case 3:
+                return (
+                  <div className="space-y-6">
+                    <h3 className="text-xl font-semibold text-blue-800">HR Interview Assessment</h3>
+                    {selectedCandidate && (
+                      <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-6 rounded-lg shadow-md">
+                        <div className="flex justify-between items-start mb-6">
+                          <div>
+                            <h4 className="text-lg font-semibold">{candidates[selectedCandidate].name}</h4>
+                            <p className="text-gray-600">{candidates[selectedCandidate].role}</p>
+                          </div>
+                        </div>
+                        <div className="space-y-4">
+                          <button
+                            onClick={() => {
+                              handleCandidateAction(selectedCandidate, 'accept');
+                              handleProcessStage();
+                            }}
+                            className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white px-4 py-2 rounded-lg hover:opacity-90 transition-opacity"
+                          >
+                            Accept Candidate
+                          </button>
+                          <button
+                            onClick={() => {
+                              handleCandidateAction(selectedCandidate, 'reject');
+                              handleProcessStage();
+                            }}
+                            className="w-full bg-gradient-to-r from-red-500 to-red-600 text-white px-4 py-2 rounded-lg hover:opacity-90 transition-opacity"
+                          >
+                            Reject Candidate
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+
+              case 4:
+                return (
+                  <div className="space-y-6">
+                    <h3 className="text-xl font-semibold text-blue-800">HR Onboarding</h3>
+                    {selectedCandidate && candidates[selectedCandidate].status === 'accept' && !offerLetterSent && (
+                      <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-6 rounded-lg shadow-md">
+                        <div className="flex items-center justify-center mb-6">
+                          <div className="bg-blue-100 text-blue-800 px-4 py-2 rounded-full">
+                            Offer Letter
+                          </div>
+                        </div>
+                        
+                        <div className="border border-blue-200 p-6 rounded-lg mb-6 bg-white">
+                          <div className="text-center mb-6">
+                            <h3 className="text-xl font-bold text-blue-800">OFFER LETTER</h3>
+                            <p className="text-gray-500">Reference: OL-{Math.floor(Math.random() * 10000)}</p>
+                          </div>
+                          
+                        <div className="space-y-4">
+                            <p>Date: {new Date().toLocaleDateString()}</p>
+                            
+                            <p>Dear {candidates[selectedCandidate].name},</p>
+                            
+                            <p>We are pleased to offer you the position of <strong>{candidates[selectedCandidate].role}</strong> at our company. This letter outlines the terms and conditions of your employment.</p>
+                            
+                            <div className="space-y-2">
+                              <p><strong>Start Date:</strong> {new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString()}</p>
+                              <p><strong>Salary:</strong> ${(80000 + Math.floor(Math.random() * 40000)).toLocaleString()} per annum</p>
+                              <p><strong>Location:</strong> Hybrid (3 days in office, 2 days remote)</p>
+                              <p><strong>Reporting To:</strong> Team Lead, {candidates[selectedCandidate].role}</p>
+                            </div>
+                            
+                            <p>Please confirm your acceptance by signing and returning this letter.</p>
+                            
+                            <p>Sincerely,<br />HR Department</p>
+                          </div>
+                        </div>
+                        
+                        <button
+                          onClick={() => setOfferLetterSent(true)}
+                          className="w-full bg-gradient-to-r from-blue-600 to-blue-800 text-white px-4 py-2 rounded-lg hover:opacity-90 transition-opacity"
+                        >
+                          Send Offer Letter to Candidate
+                        </button>
+                      </div>
+                    )}
+                    
+                    {selectedCandidate && candidates[selectedCandidate].status === 'accept' && offerLetterSent && !documentationComplete && (
+                      <div className="bg-white p-6 rounded-lg shadow-md">
+                        <div className="flex items-center justify-center mb-6">
+                          <div className="bg-blue-100 text-blue-800 px-4 py-2 rounded-full">
+                            Documentation Process
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-4">
+                          <p className="text-center">The offer letter has been sent to {candidates[selectedCandidate].name}.</p>
+                          
+                          <h4 className="font-semibold">Required Documents:</h4>
+                          <ul className="space-y-2">
+                            <li className="flex items-center space-x-2">
+                              <CheckCircle2 className="w-5 h-5 text-gray-400" />
+                              <span>Signed Offer Letter</span>
+                            </li>
+                            <li className="flex items-center space-x-2">
+                              <CheckCircle2 className="w-5 h-5 text-gray-400" />
+                              <span>Identity Proof</span>
+                            </li>
+                            <li className="flex items-center space-x-2">
+                              <CheckCircle2 className="w-5 h-5 text-gray-400" />
+                              <span>Address Proof</span>
+                            </li>
+                            <li className="flex items-center space-x-2">
+                              <CheckCircle2 className="w-5 h-5 text-gray-400" />
+                              <span>Educational Certificates</span>
+                            </li>
+                            <li className="flex items-center space-x-2">
+                              <CheckCircle2 className="w-5 h-5 text-gray-400" />
+                              <span>Previous Employment Records</span>
+                            </li>
+                          </ul>
+                        </div>
+                        
+                        <button
+                          onClick={() => setDocumentationComplete(true)}
+                          className="w-full bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors mt-6"
+                        >
+                          Complete Documentation Process
+                        </button>
+                      </div>
+                    )}
+                    
+                    {selectedCandidate && candidates[selectedCandidate].status === 'accept' && documentationComplete && (
+                      <div className="bg-white p-6 rounded-lg shadow-md">
+                        <div className="flex items-center justify-center mb-6">
+                          <div className="bg-green-100 text-green-800 px-4 py-2 rounded-full flex items-center">
+                            <CheckCircle2 className="w-5 h-5 mr-2" />
+                            Onboarding Complete
+                          </div>
+                        </div>
+                        <div className="space-y-4">
+                          <h4 className="font-semibold text-green-700">Onboarding Checklist Completed</h4>
+                          <ul className="space-y-2">
+                            <li className="flex items-center space-x-2">
+                              <CheckCircle2 className="w-5 h-5 text-green-600" />
+                              <span>Offer letter accepted</span>
+                            </li>
+                            <li className="flex items-center space-x-2">
+                              <CheckCircle2 className="w-5 h-5 text-green-600" />
+                              <span>Documentation completed</span>
+                            </li>
+                            <li className="flex items-center space-x-2">
+                              <CheckCircle2 className="w-5 h-5 text-green-600" />
+                              <span>Welcome package prepared</span>
+                            </li>
+                            <li className="flex items-center space-x-2">
+                              <CheckCircle2 className="w-5 h-5 text-green-600" />
+                              <span>IT equipment assigned</span>
+                            </li>
+                            <li className="flex items-center space-x-2">
+                              <CheckCircle2 className="w-5 h-5 text-green-600" />
+                              <span>First-day orientation scheduled</span>
+                            </li>
+                          </ul>
+                          
+                          <div className="bg-green-50 p-4 rounded-lg mt-4 border border-green-200">
+                            <div className="flex items-center">
+                              <PartyPopper className="w-6 h-6 text-green-600 mr-2" />
+                              <p className="text-green-800 font-semibold">Candidate is ready to join on {new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString()}!</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {selectedCandidate && candidates[selectedCandidate].status === 'reject' && !rejectionEmailSent && (
+                      <div className="bg-white p-6 rounded-lg shadow-md">
+                        <div className="flex items-center justify-center mb-6">
+                          <div className="bg-red-100 text-red-800 px-4 py-2 rounded-full flex items-center">
+                            <XCircle className="w-5 h-5 mr-2" />
+                            Candidate Not Selected
+                          </div>
+                        </div>
+                        
+                        <div className="border border-gray-200 p-6 rounded-lg mb-6">
+                          <div className="border-b border-gray-200 pb-4 mb-4">
+                            <div className="flex justify-between">
+                              <div>
+                                <p className="text-sm text-gray-500">To:</p>
+                                <p>{candidates[selectedCandidate].name} &lt;{candidates[selectedCandidate].name.toLowerCase().replace(' ', '.')}@example.com&gt;</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-sm text-gray-500">Date:</p>
+                                <p>{new Date().toLocaleDateString()}</p>
+                              </div>
+                            </div>
+                            <div className="mt-3">
+                              <p className="text-sm text-gray-500">From:</p>
+                              <p>HR Department &lt;hr@yourcompany.com&gt;</p>
+                            </div>
+                            <div className="mt-3">
+                              <p className="text-sm text-gray-500">Subject:</p>
+                              <p>Regarding Your Application for {candidates[selectedCandidate].role} Position</p>
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-4 text-gray-700">
+                            <p>Dear {candidates[selectedCandidate].name},</p>
+                            
+                            <p>Thank you for your interest in the {candidates[selectedCandidate].role} position at our company and for taking the time to interview with us.</p>
+                            
+                            <p>After careful consideration, we have decided to move forward with other candidates whose qualifications and experience better align with our current needs. This decision was not easy, as we were impressed with many aspects of your background.</p>
+                            
+                            <p>We appreciate your interest in our company and would like to encourage you to apply for future positions that match your skills and experience. We will keep your resume on file and contact you if a suitable position becomes available.</p>
+                            
+                            <p>We wish you all the best in your job search and future career endeavors.</p>
+                            
+                            <p>Sincerely,<br />The HR Team</p>
+                          </div>
+                        </div>
+                        
+                        <button
+                          onClick={() => setRejectionEmailSent(true)}
+                          className="w-full bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+                        >
+                          Send Rejection Email
+                        </button>
+                      </div>
+                    )}
+                    
+                    {selectedCandidate && candidates[selectedCandidate].status === 'reject' && rejectionEmailSent && (
+                      <div className="bg-white p-6 rounded-lg shadow-md">
+                        <div className="flex items-center justify-center mb-6">
+                          <div className="bg-green-100 text-green-800 px-4 py-2 rounded-full flex items-center">
+                            <CheckCircle2 className="w-5 h-5 mr-2" />
+                            Rejection Email Sent
+                          </div>
+                        </div>
+                        <p className="text-center text-gray-600 mb-4">
+                          The rejection email has been sent to {candidates[selectedCandidate].name}.
+                        </p>
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <p className="text-gray-600">The recruitment process for this candidate has been completed.</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+
+              default:
+                return null;
+            }
+          })()}
+        </div>
+      </div>
+    );
   };
 
   // Add the handleGoalAction function
@@ -3198,108 +3247,67 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-indigo-600 text-white">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-3">
-              <Bot className="w-8 h-8" />
-              <h1 className="text-2xl font-bold">HR Agentic AI Platform</h1>
-            </div>
-            <button
-              className="lg:hidden"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            >
-              {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
+    <div className="flex h-screen bg-gradient-to-br from-blue-50 to-blue-100">
+      {/* Sidebar */}
+      <div className={`${showSidebar ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 fixed md:static z-20 h-full w-64 bg-gradient-to-b from-blue-700 to-blue-900 text-white transition-transform duration-300 ease-in-out transform shadow-lg`}>
+        <div className="p-4 border-b border-blue-600">
+          <div className="flex items-center space-x-3">
+            <Bot className="w-6 h-6" />
+            <h1 className="text-xl font-semibold">Project Bolt</h1>
+          </div>
+          <p className="text-sm text-blue-200 mt-1">AI-Powered HR Management</p>
+        </div>
+        
+        <div className="p-4">
+          <h2 className="text-sm uppercase tracking-wider text-blue-300 mb-3">Agents</h2>
+          <div className="space-y-1">
+            {agents.map(agent => (
+              <button
+                key={agent.id}
+                onClick={() => {
+                  setSelectedAgent(agent.id);
+                  setCurrentStage(0);
+                  setShowSidebar(false);
+                }}
+                className={`w-full flex items-center space-x-3 p-2 rounded-lg transition-colors ${
+                  selectedAgent === agent.id 
+                    ? 'bg-blue-800 text-white' 
+                    : 'text-blue-100 hover:bg-blue-800/50'
+                }`}
+              >
+                {agent.icon}
+                <span>{agent.name}</span>
+              </button>
+            ))}
           </div>
         </div>
-      </header>
-
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col lg:flex-row gap-8">
-          <nav className={`lg:w-1/4 ${isMobileMenuOpen ? 'block' : 'hidden'} lg:block`}>
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h2 className="text-lg font-semibold mb-4">AI Agents</h2>
-              <div className="space-y-2">
-                {agents.map(agent => (
-                  <button
-                    key={agent.id}
-                    onClick={() => setSelectedAgent(agent.id)}
-                    className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-                      selectedAgent === agent.id
-                        ? 'bg-indigo-50 text-indigo-600'
-                        : 'hover:bg-gray-50'
-                    }`}
-                  >
-                    {agent.icon}
-                    <span>{agent.name}</span>
-                  </button>
-                ))}
-              </div>
+      </div>
+      
+      {/* Main content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="bg-white border-b border-gray-200 shadow-sm">
+          <div className="flex justify-between items-center p-4">
+            <div className="flex items-center space-x-4">
+              <button 
+                onClick={() => setShowSidebar(!showSidebar)}
+                className="md:hidden text-gray-700"
+              >
+                <Menu className="w-6 h-6" />
+              </button>
+              <h1 className="text-xl font-semibold text-gray-800">
+                {selectedAgentData ? selectedAgentData.name : 'Dashboard'}
+              </h1>
             </div>
-          </nav>
-
-          <main className="lg:w-3/4">
-            <div className="bg-white rounded-lg shadow-lg p-8">
-              <div className="flex items-center space-x-4 mb-6">
-                {selectedAgentData?.icon}
-                <h2 className="text-2xl font-bold">{selectedAgentData?.name}</h2>
-              </div>
-              
-              <p className="text-gray-600 mb-8">{selectedAgentData?.description}</p>
-
-              {selectedAgent === 'recruitment' && renderRecruitmentContent()}
-              {selectedAgent === 'performance' && renderPerformanceContent()}
-              {selectedAgent === 'leave' && renderLeaveContent()}
-
-              <div className="space-y-6">
-                {selectedAgentData?.workflow.map((stage, index) => (
-                  <div 
-                    key={index} 
-                    className={`rounded-lg p-6 ${
-                      selectedAgent === 'recruitment' 
-                        ? getStageColor(stage.status) 
-                        : selectedAgent === 'performance'
-                          ? (index === performanceStage 
-                              ? 'bg-blue-100 text-blue-800'
-                              : index < performanceStage
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-gray-100 text-gray-800')
-                        : 'bg-indigo-50'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-3 mb-4">
-                      {stage.icon}
-                      <h3 className="text-lg font-semibold">{stage.stage}</h3>
-                      {selectedAgent === 'recruitment' && stage.status === 'completed' && (
-                        <CheckCircle2 className="w-5 h-5 text-green-600 ml-auto" />
-                      )}
-                      {selectedAgent === 'performance' && index < performanceStage && (
-                        <CheckCircle2 className="w-5 h-5 text-green-600 ml-auto" />
-                      )}
-                    </div>
-                    <ul className="space-y-3 ml-8">
-                      {stage.actions.map((action, actionIndex) => (
-                        <li key={actionIndex} className="flex items-center space-x-2">
-                          <div className="w-2 h-2 bg-current rounded-full"></div>
-                          <span>{action}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-8 bg-gray-50 rounded-lg p-6">
-                <h3 className="text-lg font-semibold mb-4">Agent Status</h3>
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-green-600">Active and ready to assist</span>
-                </div>
-              </div>
+            <div>
+              <span className="text-sm text-gray-500">Welcome, Admin</span>
             </div>
-          </main>
+          </div>
+        </div>
+        
+        {/* Content area */}
+        <div className="flex-1 overflow-auto p-6">
+          {renderContent()}
         </div>
       </div>
     </div>
